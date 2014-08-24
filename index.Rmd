@@ -12,7 +12,9 @@ The task was to use inertial measurement unit data to learn whether a bicep curl
 
 The data and its collection was initially described here http://groupware.les.inf.puc-rio.br/public/papers/2013.Velloso.QAR-WLE.pdf. 
 
-Data was prepared for learning using only very simple cleaning methods to ensure that each feature was available for every sample (i.e. no NAs in data).  A random forest was trained.  Out of sample error was estimated to be 0.53% as assessed by accuracy performance on validation data held out of the initial training data.  20 out of 20 test samples were correctly classified.
+Data was prepared for learning using only very simple cleaning methods to ensure that each feature was available for every sample (i.e. no NAs in data).  A random forest was trained.  Out of sample error was estimated to be 0.53% as assessed by the out-of-bag error estimate built into the randomForest method.  This estimate was confirmed by assesing accuracy performance on validation data held out of the initial training data.  
+
+The final model was tested on 20 test samples. All were correctly classified.
 
 
 Preparing the work environment
@@ -126,6 +128,9 @@ Learning
 
 Multiple methods and packages were assessed for learning.  A simple decision tree was attempted first.
 
+Performance was poor - with an overall accuracy of only 0.552 (see below).  This performance is better than randomly guessing the class; there are five classes in the learning problem and if we were to simply guess the class for each sample we would expect to be correct (have an accuracy of) 20% of the time.
+
+
 ```{r decisionTree, results='hide', cache=TRUE}
 
 # train the model
@@ -144,9 +149,12 @@ predictions <- predict(modFit,newdata=validation)
 confusionMatrix(predictions,validation$classe)
 ```
 
-Performance was poor - with an overall accuracy of only 0.552 even though sensitivity was above random for classes A and C (0.634 and 0.798 respectively.
+Learning with a random forest approach
+--------------------------------------
 
-A random forest approach was used second.  The mtry parameter of the the randomForest method was first optimized using tuneRF.  
+The appraoch used by the authors in the original paper was a bagging method involving 10 random forests.  I tried a single random forest method next - something closer to that used in the original study.  
+
+The mtry parameter of the the randomForest method was first optimized using tuneRF.  
 
 ```{r randomForest, cache=TRUE}
 
@@ -167,9 +175,25 @@ modfit <- randomForest(classe ~ ., data=training, mtry=10, ntree=1000, keep.fore
 modfit
 
 ```
-The out-of-bag error rate was estimated to be 0.53%.
+Out-of-sample error estimation
+------------------------------
 
-Out of sample error rate was also estimated using an unseen validation set.
+The out-of-bag error rate was estimated to be 0.53% (see above).  Out-of-bag (oob) error is synonymous with out-of-sample error.
+Oob is a unbiased estimate of the test set error (out-of-sample error) that is based on cross validation  and built into the random forest method itself.
+
+
+The following explanation is from http://www.stat.berkeley.edu/~breiman/RandomForests/cc_home.htm#ooberr. 
+
+"In random forests, there is no need for cross-validation or a separate test set to get an unbiased estimate of the test set error. It is estimated internally, during the run, as follows:
+
+Each tree is constructed using a different bootstrap sample from the original data. About one-third of the cases are left out of the bootstrap sample and not used in the construction of the kth tree.
+
+Put each case left out in the construction of the kth tree down the kth tree to get a classification. In this way, a test set classification is obtained for each case in about one-third of the trees. At the end of the run, take j to be the class that got most of the votes every time case n was oob. The proportion of times that j is not equal to the true class of n averaged over all cases is the oob error estimate. This has proven to be unbiased in many tests."
+
+
+Since I had already set aside a validation set from my training data, I chose to also estimate out-of-sample error rate using an this unseen validation set.  In this case, the out of sample error was estimated to be 0.5%.  This constitutes just a 1X cross-validation and will not be as reliable as the oob error estimated by the randomForest method.  
+
+
 ```{r validation, cache=TRUE}
 
 #make preditions on validation data
@@ -181,8 +205,8 @@ confusionMatrix(predictions,validation$classe)
 
 
 ```
-
-In this case, the out of sample error was estimated to be 0.5%.
+Predictions for test set and results
+------------------------------------
 
 The model was used to predict classifications for the 20 samples in the test set.  These predictions were prepared for submission.  All 20 submissions were correct.
 
